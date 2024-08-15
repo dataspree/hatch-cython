@@ -8,6 +8,15 @@
 
 ---
 
+In comparison to the original `hatch-cython`, this fork introduces the following options/features:
+- **options.include_all_compiled_src** (default=True): toggle for including or excluding all source files from the build target after they were precompiled by cython (cythonized).
+- **options.files.exclude_compiled_src**: excluding selected source files from the build target after they were precompiled by cython (cythonized). This option is applied after `options.include_all_compiled_src`.
+- **options.files.include_compiled_src**: including selected source files from the build target after they were precompiled by cython (cythonized). This option is applied after `options.files.exclude_compiled_src`.
+- **options.compiled_extensions_as_artifacts** (default=True): Adding compiled extension files (`.so`, `.pyd`, `.dll`) to the artifacts for the wheel build target. To keep backward compatibility, set this option to `false`.
+- **options.intermediate_extensions_as_artifacts** (default=False): Adding intermediate extension files (`.c`, `.cpp`) to the artifacts for the wheel build target. To keep backward compatibility, set this option to `true`.
+- Clean works now via absolute paths which fixes the issue with the clean command not working when the current working directory is not the project root.
+- All matches are now based on git-style glob patterns instead of using i mix of regex and glob patterns. This is more consistent with the rest of the hatch configuration.
+
 **Table of Contents**
 
 - [Usage](#usage)
@@ -167,6 +176,7 @@ All options are specified under `[tool.hatch.build.targets.wheel.hooks.cython.op
 | `parallel`          | `bool`                     | If `true`, adds OpenMP headers and flags for parallel compilation. **macOS users**: Requires Homebrew's LLVM (`brew install llvm`) instead of Apple's LLVM to use `-fopenmp`. Default: `false`                                                                                                                                            |
 | `compiler`          | `str`                      | Compiler identifier. If set to `"msvc"` (Microsoft Visual Studio), uses `/openmp` instead of `-fopenmp` when `parallel = true`.                                                                                                                                                                                                           |
 | `compile_py`        | `bool`                     | If `true`, `.py` files are compiled to Cython extensions alongside `.pyx` files. This allows you to write standard Python that gets compiled. Use `files.exclude` to skip specific files. Default: `true`                                                                                                                                 |
+| files               | IDK IF STILL HERE          | dict offering [file specific adjustments](###files) `exclude`, `targets`, `aliases`.                                                                                                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `define_macros`     | `list[list[str]]`          | C preprocessor macro definitions. Each entry is a list: `["KEY"]` for `#define KEY` or `["KEY", "VALUE"]` for `#define KEY VALUE`. Example: `[["NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION"]]`                                                                                                                                          |
 | `**kwargs`          | `any`                      | Additional keyword arguments are passed directly to `setuptools.Extension()`. See [extensions] for available options.                                                                                                                                                                                                                     |
 
@@ -431,3 +441,4 @@ The plugin automatically detects Homebrew's LLVM and adds the appropriate includ
 [compiler-directives]: https://cython.readthedocs.io/en/latest/src/userguide/source_files_and_compilation.html#compiler-directives
 [git-cliff]: https://git-cliff.org
 [tasks]: https://taskfile.dev
+

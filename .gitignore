@@ -16,3 +16,4 @@ dist/
 .ruff_cache
 .pytest_cache
 junit.xml
+.idea/
