@@ -543,30 +543,20 @@ class CythonBuildHook(BuildHookInterface):
         if self.target_name != "wheel":
             return
 
-        # Pull patterns from config
-        exclude_pats = _normalize_patterns(getattr(self.options.files, "exclude_compiled_src", None))
-        include_pats = _normalize_patterns(getattr(self.options.files, "include_compiled_src", None))
-
         # Reasonable defaults: keep typing markers/stubs unless user explicitly excludes them
         def should_drop(member_name: str) -> bool:
-            # Wheel paths are always posix
-            name = member_name
+            name = member_name  # wheel paths are posix already
 
-            # Never drop dist-info contents here (except RECORD which we rewrite)
+            # keep dist-info (we only rewrite RECORD)
             if ".dist-info/" in name:
                 return False
 
-            # Keep typing artifacts unless explicitly excluded
+            # keep typing artifacts
             if name.endswith("py.typed") or name.endswith(".pyi"):
                 return False
 
-            # Apply configured exclude/include patterns
-            if exclude_pats and _matches_any(name, exclude_pats):
-                if include_pats and _matches_any(name, include_pats):
-                    return False
-                return True
-
-            return False
+            # IMPORTANT: use your existing pathspec-based matchers
+            return self.path_is_excluded_compiled_src(name) and not self.path_is_included_compiled_src(name)
 
         tmp_fd, tmp_path = tempfile.mkstemp(suffix=".whl")
         os.close(tmp_fd)
