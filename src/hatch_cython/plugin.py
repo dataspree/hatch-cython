@@ -37,10 +37,6 @@ import tempfile
 import zipfile
 from pathlib import PurePosixPath
 
-def _matches_any(path: str, patterns: list[str]) -> bool:
-    p = PurePosixPath(path)
-    return any(p.match(pat) for pat in patterns)
-
 
 def remove_leading_dot(path: str) -> str:
     if path.startswith("./"):
@@ -55,6 +51,52 @@ def filter_ensure_wanted(wanted: CallableT[[str], bool] , tgts: ListStr):
             tgts,
         )
     )
+from typing import Any, Iterable
+from pathlib import PurePosixPath
+
+def _pattern_str(x: Any) -> str:
+    # already a string
+    if isinstance(x, str):
+        return x
+
+    # common attribute names
+    for attr in ("pattern", "value", "glob", "expr"):
+        if hasattr(x, attr):
+            v = getattr(x, attr)
+            if isinstance(v, str):
+                return v
+
+    # dict-like
+    if isinstance(x, dict):
+        for k in ("pattern", "value", "glob", "expr"):
+            v = x.get(k)
+            if isinstance(v, str):
+                return v
+
+    # last resort: hope __str__ returns a usable glob
+    return str(x)
+
+def _normalize_patterns(pats: Any) -> list[str]:
+    if pats is None:
+        return []
+    if isinstance(pats, (str, bytes)):
+        return [pats.decode() if isinstance(pats, bytes) else pats]
+    if isinstance(pats, Iterable):
+        out: list[str] = []
+        for p in pats:
+            s = _pattern_str(p)
+            # skip obviously-non-pattern stringifications
+            if s.startswith("Opt") and "(" in s and ")" in s:
+                # if your OptExclude.__str__ returns "OptExclude(...)" this prevents garbage patterns
+                # remove this guard if your __str__ IS the pattern.
+                continue
+            out.append(s)
+        return out
+    return [_pattern_str(pats)]
+
+def _matches_any(path: str, patterns: list[str]) -> bool:
+    p = PurePosixPath(path)
+    return any(p.match(pat) for pat in patterns)
 
 
 class CythonBuildHook(BuildHookInterface):
@@ -502,8 +544,8 @@ class CythonBuildHook(BuildHookInterface):
             return
 
         # Pull patterns from config
-        exclude_pats = list(getattr(self.options.files, "exclude_compiled_src", []) or [])
-        include_pats = list(getattr(self.options.files, "include_compiled_src", []) or [])
+        exclude_pats = _normalize_patterns(getattr(self.options.files, "exclude_compiled_src", None))
+        include_pats = _normalize_patterns(getattr(self.options.files, "include_compiled_src", None))
 
         # Reasonable defaults: keep typing markers/stubs unless user explicitly excludes them
         def should_drop(member_name: str) -> bool:
