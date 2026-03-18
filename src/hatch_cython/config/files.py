@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from hatch_cython.config.platform import PlatformBase
-from hatch_cython.types import DictT, ListT
 from hatch_cython.utils import parse_user_glob
 
 
@@ -19,8 +18,8 @@ class OptInclude(PlatformBase):
 
 def _get_file_list(
     cls: "type[OptInclude | OptExclude]",
-    files: "ListT[str | OptInclude | OptExclude]",
-) -> "ListT[OptInclude | OptExclude]":
+    files: "list[str | OptInclude | OptExclude]",
+) -> "list[OptInclude | OptExclude]":
     return [
         *[cls(**d) for d in files if isinstance(d, dict)],  # type: ignore[arg-type]
         *[cls(matches=s) for s in files if isinstance(s, str)],
@@ -29,11 +28,11 @@ def _get_file_list(
 
 @dataclass
 class FileArgs:
-    targets: ListT[str | OptInclude] = field(default_factory=list)
-    exclude: ListT[str | OptExclude] = field(default_factory=list)
-    aliases: DictT[str, str] = field(default_factory=dict)
-    exclude_compiled_src: ListT[str | OptExclude] = field(default_factory=list)
-    include_compiled_src: ListT[str | OptInclude] = field(default_factory=list)
+    targets: list[str | OptInclude] = field(default_factory=list)
+    exclude: list[str | OptExclude] = field(default_factory=list)
+    aliases: dict[str, str] = field(default_factory=dict)
+    exclude_compiled_src: list[str | OptExclude] = field(default_factory=list)
+    include_compiled_src: list[str | OptInclude] = field(default_factory=list)
 
     def __post_init__(self):
         rep = {}

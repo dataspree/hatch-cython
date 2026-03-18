@@ -1,4 +1,4 @@
-from hatch_cython.types import CorePlatforms, ListT, SetT
+from hatch_cython.types import CorePlatforms
 
 NORM_GLOB = r"([^\s]*)"
 UAST = "${U_AST}"
@@ -12,20 +12,20 @@ DIRECTIVES = {
 }
 LTPY311 = "python_version < '3.11'"
 MUST_UNIQUE = ["-O", "-arch", "-march"]
-POSIX_CORE: ListT[CorePlatforms] = ["darwin", "linux"]
+POSIX_CORE: list[CorePlatforms] = ["darwin", "linux"]
 
-precompiled_extensions: SetT[str] = {
+precompiled_extensions: set[str] = {
     # py is left out as we have it optional / runtime value
     ".pyx",
     ".pxd",
 }
-intermediate_extensions: SetT[str] = {
+intermediate_extensions: set[str] = {
     ".c",
     ".cpp",
 }
-_template_srcs: SetT[str] = {".py", ".pyi", *precompiled_extensions, *intermediate_extensions}
-templated_extensions: SetT[str] = {f"{f}.in" for f in _template_srcs}
-compiled_extensions: SetT[str] = {
+_template_srcs: set[str] = {".py", ".pyi", *precompiled_extensions, *intermediate_extensions}
+templated_extensions: set[str] = {f"{f}.in" for f in _template_srcs}
+compiled_extensions: set[str] = {
     ".dll",
     # unix
     ".so",

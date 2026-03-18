@@ -1,12 +1,11 @@
 from collections.abc import Callable, Hashable
 from dataclasses import dataclass
 from os import path
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 from packaging.markers import Marker
 
 from hatch_cython.constants import ANON
-from hatch_cython.types import ListStr
 from hatch_cython.utils import aarch, plat
 
 
@@ -106,4 +105,4 @@ ListedArgs = list[PlatformArgs | str]
 List[str | PlatformArgs]
 """
 
-__all__ = ["Dict", "ListStr"]
+__all__ = ["ListedArgs", "PlatformArgs", "PlatformBase"]

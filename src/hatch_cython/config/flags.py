@@ -4,7 +4,6 @@ from os import environ, pathsep
 from typing import ClassVar, Optional
 
 from hatch_cython.config.platform import PlatformArgs, parse_to_plat
-from hatch_cython.types import DictT
 
 
 @dataclass
@@ -54,10 +53,10 @@ class EnvFlags:
 
     PATH: Optional[PlatformArgs] = field(default=None)
 
-    custom: DictT[str, PlatformArgs] = field(default_factory=dict)
+    custom: dict[str, PlatformArgs] = field(default_factory=dict)
     env: dict = field(default_factory=environ.copy)
 
-    __known__: ClassVar[DictT[str, EnvFlag]] = {e.env: e for e in __flags__}
+    __known__: ClassVar[dict[str, EnvFlag]] = {e.env: e for e in __flags__}
 
     def __post_init__(self):
         for flag in __flags__:

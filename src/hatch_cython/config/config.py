@@ -16,7 +16,6 @@ from hatch_cython.config.macros import DefineMacros, parse_macros
 from hatch_cython.config.platform import ListedArgs, PlatformArgs, parse_platform_args
 from hatch_cython.config.templates import Templates, parse_template_kwds
 from hatch_cython.constants import DIRECTIVES, EXIST_TRIM, INCLUDE, LTPY311, MUST_UNIQUE
-from hatch_cython.types import ListStr
 
 # fields tracked by this plugin
 __known__ = frozenset(
@@ -136,10 +135,10 @@ def parse_from_dict(cls: BuildHookInterface):
 class Config:
     src: Optional[str] = field(default=None)
     files: FileArgs = field(default_factory=FileArgs)
-    includes: ListStr = field(default_factory=list)
+    includes: list[str] = field(default_factory=list)
     define_macros: DefineMacros = field(default_factory=list)
-    libraries: ListStr = field(default_factory=list)
-    library_dirs: ListStr = field(default_factory=list)
+    libraries: list[str] = field(default_factory=list)
+    library_dirs: list[str] = field(default_factory=list)
     directives: dict = field(default_factory=lambda: DIRECTIVES)
     compile_args: ListedArgs = field(default_factory=get_default_compile)
     compile_kwargs: dict = field(default_factory=dict)
@@ -170,7 +169,7 @@ class Config:
         im: Autoimport,
         att: str,
         mod: Any,
-        extend: Callable[[ListStr], None],
+        extend: Callable[[list[str]], None],
         append: Callable[[str], None],
     ):
         attr = getattr(im, att)
