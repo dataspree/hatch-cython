@@ -5,6 +5,7 @@ on:
     branches: [v*]
   pull_request:
     branches: [v*, main]
+  workflow_dispatch:
 
 concurrency:
   group: test-${{ github.head_ref }}
