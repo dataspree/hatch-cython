@@ -118,7 +118,20 @@ class CythonBuildHook(BuildHookInterface):
 
         super().__init__(*args, **kwargs)
 
-        _ = self.options
+        # Compute options eagerly and store directly on the instance.
+        # This avoids the @memo ID-reuse bug: Python can reuse a memory address
+        # for a new object after GC, causing @memo to return a stale Config from
+        # a prior instance without re-executing side effects such as
+        # precompiled_extensions.add(".py"). Storing on self bypasses the shared
+        # id()-keyed cache entirely.
+        self._options = parse_from_dict(self)
+        if self._options.compile_py:
+            self.precompiled_extensions.add(".py")
+        if self._options.files.explicit_targets:
+            self.precompiled_extensions.add(".py")
+            self.precompiled_extensions.add(".c")
+            self.precompiled_extensions.add(".cc")
+            self.precompiled_extensions.add(".cpp")
 
     @property
     @memo
@@ -425,22 +438,16 @@ class CythonBuildHook(BuildHookInterface):
             + list(self.compiled_files.values())
         )
         self.app.display_info(f"Hatch-cython: Removing {files_to_remove}")
-        self.app.display_info(f"Hatch-cython: intermediates {list(self.intermediate_files.values())}")
         for f_as_abs in files_to_remove:
-            os.remove(f_as_abs)
+            try:
+                os.remove(f_as_abs)
+                self.app.display_info(f"Hatch-cython: Removed {f_as_abs}")
+            except FileNotFoundError:
+                pass  # already removed (e.g. second target invocation)
 
     @property
-    @memo
     def options(self) -> Config:
-        config = parse_from_dict(self)
-        if config.compile_py:
-            self.precompiled_extensions.add(".py")
-        if config.files.explicit_targets:
-            self.precompiled_extensions.add(".py")
-            self.precompiled_extensions.add(".c")
-            self.precompiled_extensions.add(".cc")
-            self.precompiled_extensions.add(".cpp")
-        return config
+        return self._options
 
     @property
     def sdist(self) -> bool:
