@@ -30,7 +30,7 @@ def test_brew_fails_safely():
 
 
 def test_config_with_brew():
-    with pyversion("3", "9"), arch_platform("arm64", "darwin"), patch_path("arm64"), patch_brew("/opt/homebrew"):
+    with pyversion("3", "10"), arch_platform("arm64", "darwin"), patch_path("arm64"), patch_brew("/opt/homebrew"):
         ok = parse_from_dict(SimpleNamespace(config={"options": {"parallel": True}}))
         assert sorted(ok.compile_args_for_platform) == sorted(["-O2", "-I/opt/homebrew/include"])
         assert ok.compile_links_for_platform == ["-L/opt/homebrew/lib"]
@@ -71,7 +71,7 @@ def test_config_parser():
     directives = { boundscheck = false, nonecheck = false, language_level = 3, binding = true }
 
     abc_compile_kwarg = "test"
-    """  # noqa: E501
+    """
 
     def gets_include():
         return "abc"

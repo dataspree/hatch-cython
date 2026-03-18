@@ -1,9 +1,10 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from os import environ, pathsep
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 from hatch_cython.config.platform import PlatformArgs, parse_to_plat
-from hatch_cython.types import CallableT, DictT
+from hatch_cython.types import DictT
 
 
 @dataclass
@@ -13,7 +14,7 @@ class EnvFlag(PlatformArgs):
     sep: str = field(default=" ")
 
     def __hash__(self) -> int:
-        return hash(self.field)
+        return hash(self.env)
 
 
 __flags__ = (
@@ -34,24 +35,24 @@ __flags__ = (
 
 @dataclass
 class EnvFlags:
-    CC: PlatformArgs = None
-    CPP: PlatformArgs = None
-    CXX: PlatformArgs = None
+    CC: Optional[PlatformArgs] = field(default=None)
+    CPP: Optional[PlatformArgs] = field(default=None)
+    CXX: Optional[PlatformArgs] = field(default=None)
 
-    CFLAGS: PlatformArgs = None
-    CCSHARED: PlatformArgs = None
+    CFLAGS: Optional[PlatformArgs] = field(default=None)
+    CCSHARED: Optional[PlatformArgs] = field(default=None)
 
-    CPPFLAGS: PlatformArgs = None
+    CPPFLAGS: Optional[PlatformArgs] = field(default=None)
 
-    LDFLAGS: PlatformArgs = None
-    LDSHARED: PlatformArgs = None
+    LDFLAGS: Optional[PlatformArgs] = field(default=None)
+    LDSHARED: Optional[PlatformArgs] = field(default=None)
 
-    SHLIB_SUFFIX: PlatformArgs = None
+    SHLIB_SUFFIX: Optional[PlatformArgs] = field(default=None)
 
-    AR: PlatformArgs = None
-    ARFLAGS: PlatformArgs = None
+    AR: Optional[PlatformArgs] = field(default=None)
+    ARFLAGS: Optional[PlatformArgs] = field(default=None)
 
-    PATH: PlatformArgs = None
+    PATH: Optional[PlatformArgs] = field(default=None)
 
     custom: DictT[str, PlatformArgs] = field(default_factory=dict)
     env: dict = field(default_factory=environ.copy)
@@ -64,14 +65,14 @@ class EnvFlags:
         for flag in self.custom.values():
             self.merge_to_env(flag, self.get_from_custom)
 
-    def merge_to_env(self, flag: EnvFlag, get: CallableT[[str], EnvFlag]):
+    def merge_to_env(self, flag: EnvFlag, get: Callable[[str], Optional[EnvFlag]]):
         var = environ.get(flag.env)
-        override: EnvFlag = get(flag.env)
+        override: Optional[EnvFlag] = get(flag.env)
         if override and flag.merges:
-            add = var + flag.sep if var else ""
-            self.env[flag.env] = add + override.arg
+            add = (var or "") + flag.sep
+            self.env[flag.env] = add + override.arg  # type: ignore[operator]
         elif override:
-            self.env[flag.env] = override.arg
+            self.env[flag.env] = override.arg  # type: ignore[assignment]
 
     def get_from_self(self, attr):
         return getattr(self, attr)
@@ -98,13 +99,12 @@ def parse_env_args(
             parse_to_plat(EnvFlag, arg, args, i, require_argform=True)
     except KeyError:
         args = []
-    kw = {"custom": {}}
+    kw: dict = {"custom": {}}
     for arg in args:
-        arg: EnvFlag
-        if arg.applies():
+        if isinstance(arg, EnvFlag) and arg.applies():
             if arg.env in EnvFlags.__known__:
                 kw[arg.env] = arg
             else:
                 kw["custom"][arg.env] = arg
-    envflags = EnvFlags(**kw)
+    envflags = EnvFlags(**kw)  # type: ignore[arg-type]
     return envflags

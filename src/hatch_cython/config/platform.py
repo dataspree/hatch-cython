@@ -1,21 +1,22 @@
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable
 from dataclasses import dataclass
 from os import path
+from typing import Dict, Optional, Union
 
 from packaging.markers import Marker
 
 from hatch_cython.constants import ANON
-from hatch_cython.types import CallableT, ListStr, ListT, UnionT
+from hatch_cython.types import ListStr
 from hatch_cython.utils import aarch, plat
 
 
 @dataclass
 class PlatformBase(Hashable):
-    platforms: UnionT[ListStr, str] = "*"
-    arch: UnionT[ListStr, str] = "*"
+    platforms: list[str] | str = "*"
+    arch: list[str] | str = "*"
     depends_path: bool = False
-    marker: str = None
-    apply_to_marker: CallableT[[], bool] = None
+    marker: Optional[str] = None
+    apply_to_marker: Optional[Callable[[], bool]] = None
 
     def __post_init__(self):
         self.do_rewrite("platforms")
@@ -52,7 +53,7 @@ class PlatformBase(Hashable):
         _anon = ANON == att and defn == ""
         return (att in (defn, "*")) or _anon
 
-    def applies(self, platform: UnionT[None, str] = None, arch: UnionT[None, str] = None):
+    def applies(self, platform: Optional[str] = None, arch: Optional[str] = None):
         if platform is None:
             platform = plat()
         if arch is None:
@@ -64,23 +65,23 @@ class PlatformBase(Hashable):
 
     def is_exist(self, trim: int = 0):
         if self.depends_path:
-            return path.exists(self.arg[trim:])
+            return path.exists(self.arg[trim:])  # type: ignore[attr-defined]
         return True
 
 
 @dataclass
 class PlatformArgs(PlatformBase):
-    arg: str = None
+    arg: Optional[str] = None
 
     def __hash__(self) -> int:
         return hash(self.arg)
 
 
-def parse_to_plat(cls, arg, args: UnionT[list, dict], key: UnionT[int, str], require_argform: bool, **kwargs):
+def parse_to_plat(cls, arg, args: list | dict, key: int | str, require_argform: bool, **kwargs):
     if isinstance(arg, cls):
         pass
     elif isinstance(arg, dict):
-        args[key] = cls(**arg, **kwargs)
+        args[key] = cls(**arg, **kwargs)  # type: ignore[index]
     elif require_argform:
         msg = f"arg {key} is invalid. must be of type ({{ flag = ... , platform = '*' }}) given {arg} ({type(arg)})"
         raise ValueError(msg)
@@ -89,8 +90,8 @@ def parse_to_plat(cls, arg, args: UnionT[list, dict], key: UnionT[int, str], req
 def parse_platform_args(
     kwargs: dict,
     name: str,
-    default: CallableT[[], ListT[PlatformArgs]],
-) -> ListT[UnionT[str, PlatformArgs]]:
+    default: Callable[[], list["PlatformArgs"]],
+) -> list[Union[str, "PlatformArgs"]]:
     try:
         args = [*default(), *kwargs.pop(name)]
         for i, arg in enumerate(args):
@@ -100,7 +101,9 @@ def parse_platform_args(
     return args
 
 
-ListedArgs = ListT[UnionT[PlatformArgs, str]]
+ListedArgs = list[PlatformArgs | str]
 """
 List[str | PlatformArgs]
 """
+
+__all__ = ["Dict", "ListStr"]

@@ -3,7 +3,7 @@ from sys import path as syspath
 from types import SimpleNamespace
 
 import pytest
-from hatchling.builders.wheel import WheelBuilderConfig, WheelBuilder
+from hatchling.builders.wheel import WheelBuilder, WheelBuilderConfig
 from toml import load
 
 from hatch_cython.plugin import CythonBuildHook

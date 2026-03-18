@@ -1,12 +1,13 @@
 import re
 from dataclasses import asdict, dataclass, field
 from textwrap import dedent
+from typing import Optional
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 from hatch_cython.config.platform import PlatformBase
 from hatch_cython.constants import NORM_GLOB
-from hatch_cython.types import ListStr, ListT, UnionT
+from hatch_cython.types import ListStr, ListT
 from hatch_cython.utils import parse_user_glob
 
 
@@ -20,7 +21,10 @@ def idx_search_mod(s: str):
 @dataclass
 class IndexItem(PlatformBase):
     keyword: str = "*"
-    matches: UnionT[str, ListStr] = field(default_factory=list)
+    matches: str | ListStr = field(default_factory=list)
+
+    def __hash__(self) -> int:
+        return hash(self.keyword)
 
     def __post_init__(self):
         matches = self.matches
@@ -31,7 +35,7 @@ class IndexItem(PlatformBase):
         self.matches = sorted(matches, key=lambda it: -1 if it == NORM_GLOB else 1)
 
     def file_match(self, file: str) -> bool:
-        for patt in self.matches:
+        for patt in self.matches:  # type: ignore[union-attr]
             # we take the local part out since we match on extensions
             if re.match(patt, file.replace("./", "")):
                 return True
@@ -42,7 +46,7 @@ class Templates:  # noqa: PLW1641
     index: ListT[IndexItem]
     kwargs: dict
 
-    def __init__(self, index: ListT[IndexItem] = None, **kwargs):
+    def __init__(self, index: Optional[ListT[IndexItem]] = None, **kwargs):
         if index is None:
             index = []
 
@@ -70,7 +74,7 @@ class Templates:  # noqa: PLW1641
         }
 
     def find(self, cls: BuildHookInterface, *files: str):
-        kwds = {}
+        kwds: dict = {}
 
         for can in self.index:
             for file in files:

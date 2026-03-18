@@ -1,16 +1,15 @@
 import os
 from contextlib import contextmanager
 from types import SimpleNamespace
+from typing import Optional
 from unittest.mock import patch
-
-from hatch_cython.types import UnionT
 
 
 def true_if_eq(*vals):
     def inner(v: str, *extra):
         merge = [*vals, *extra]
         ok = any(v == val for val in merge)
-        print(f"ok: {v} {ok} ", merge)  # noqa: T201
+        print(f"ok: {v} {ok} ", merge)
         return ok
 
     return inner
@@ -42,7 +41,7 @@ def patch_brew(prefix):
 
 
 @contextmanager
-def arch_platform(arch: str, platform: str, brew: UnionT[str, None] = True):
+def arch_platform(arch: str, platform: str, brew: Optional[str] = True):  # type: ignore[assignment]
     def aarchgetter():
         return arch
 
@@ -67,13 +66,13 @@ def arch_platform(arch: str, platform: str, brew: UnionT[str, None] = True):
                                     else:
                                         yield
     finally:
-        print(f"Clean {arch}-{platform}")  # noqa: T201
+        print(f"Clean {arch}-{platform}")
         del aarchgetter, platformgetter
         pass
 
 
 @contextmanager
-def pyversion(maj="3", min="10", p="0"):  # noqa: A002
+def pyversion(maj="3", min="10", p="0"):
     try:
         with patch("platform.python_version_tuple", lambda: (maj, min, p)):
             yield
@@ -84,7 +83,7 @@ def pyversion(maj="3", min="10", p="0"):  # noqa: A002
 @contextmanager
 def import_module(gets_include, gets_libraries=None, gets_library_dirs=None, some_setup_op=None):
     def get_import(name: str):
-        print(f"patched {name}")  # noqa: T201
+        print(f"patched {name}")
         return SimpleNamespace(
             gets_include=gets_include,
             gets_libraries=gets_libraries,

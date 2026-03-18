@@ -1,12 +1,10 @@
 import shutil
 from os import getcwd, path
-from pathlib import Path  # noqa: F401
 from sys import path as syspath
 from types import SimpleNamespace
-from typing import Optional
 
 import pytest
-from hatchling.builders.wheel import WheelBuilderConfig, WheelBuilder
+from hatchling.builders.wheel import WheelBuilder, WheelBuilderConfig
 from toml import load
 
 from hatch_cython.plugin import CythonBuildHook
@@ -39,7 +37,7 @@ def new_src_proj(tmp_path):
 
 
 @pytest.mark.parametrize("include_all_compiled_src", [None, True, False])
-def test_wheel_build_hook(new_src_proj, include_all_compiled_src: Optional[bool]):
+def test_wheel_build_hook(new_src_proj, include_all_compiled_src: bool | None):
     with override_dir(new_src_proj):
         syspath.insert(0, str(new_src_proj))
         build_config = load(new_src_proj / "hatch.toml")["build"]
@@ -138,8 +136,14 @@ def test_wheel_build_hook(new_src_proj, include_all_compiled_src: Optional[bool]
             {"name": "example_lib.mod_a.deep_nest.creates", "files": ["src/example_lib/mod_a/deep_nest/creates.pyx"]},
             {"name": "example_lib.mod_a.some_defn", "files": ["src/example_lib/mod_a/some_defn.py"]},
             {"name": "example_lib.normal", "files": ["src/example_lib/normal.py"]},
-            {"name": "example_lib.normal_exclude_compiled_src", "files": ["src/example_lib/normal_exclude_compiled_src.py"]},
-            {"name": "example_lib.normal_include_compiled_src", "files": ["src/example_lib/normal_include_compiled_src.py"]},
+            {
+                "name": "example_lib.normal_exclude_compiled_src",
+                "files": ["src/example_lib/normal_exclude_compiled_src.py"],
+            },
+            {
+                "name": "example_lib.normal_include_compiled_src",
+                "files": ["src/example_lib/normal_include_compiled_src.py"],
+            },
             {"name": f"example_lib.platform.{plat()}", "files": [f"src/example_lib/platform/{plat()}.pyx"]},
             {"name": "example_lib.templated", "files": ["src/example_lib/templated.pyx"]},
             {"name": "example_lib.test", "files": ["src/example_lib/test.pyx"]},
