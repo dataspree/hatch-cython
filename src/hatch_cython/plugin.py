@@ -127,8 +127,6 @@ class CythonBuildHook(BuildHookInterface):
         return plat() == "windows"
 
     def normalize_path(self, pattern: str) -> str:
-        if self.is_windows:
-            return pattern.replace("/", "\\")
         return pattern.replace("\\", "/")
 
     def normalize_glob(self, pattern: str):
