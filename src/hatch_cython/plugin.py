@@ -145,6 +145,8 @@ class CythonBuildHook(BuildHookInterface):
         return plat() == "windows"
 
     def normalize_path(self, pattern: str) -> str:
+        if self.is_windows:
+            return pattern.replace("/", "\\")
         return pattern.replace("\\", "/")
 
     def normalize_glob(self, pattern: str):
@@ -359,7 +361,6 @@ class CythonBuildHook(BuildHookInterface):
             yield os.path.realpath(temp_dir)
 
     def get_aliased_path(self, path: str) -> str:
-        path = path.replace("\\", "/")
         path_without_src = path
         if self.is_src:
             path_without_src = path.replace("src/", "")
