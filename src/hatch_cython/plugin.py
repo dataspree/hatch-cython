@@ -357,6 +357,7 @@ class CythonBuildHook(BuildHookInterface):
             yield os.path.realpath(temp_dir)
 
     def get_aliased_path(self, path: str) -> str:
+        path = path.replace("\\", "/")
         path_without_src = path
         if self.is_src:
             path_without_src = path.replace("src/", "")
