@@ -176,6 +176,8 @@ known-first-party = ["hatch_cython"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401"]
+# Plugin implements BuildHookInterface — unused args are required by the interface signature
+"src/hatch_cython/plugin.py" = ["ARG002"]
 # Tests can use magic values, assertions, and relative imports
 "tests/**/*" = ["PLR2004", "S101", "TID252", "T201", "A002", "E501"]
 # Test libraries contain intentional patterns for testing
