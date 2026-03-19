@@ -1,10 +1,13 @@
-from hatch_cython.types import CallableT, DictT, ListT, P, TupleT, UnionT
+from typing import Callable, Optional, Union
+
+from hatch_cython.types import P
 
 
 # basic test to assert we can use subscriptable generics
 def test_type_compat():
-    TupleT[int, str]
-    DictT[str, str]
-    ListT[str]
-    CallableT[P, str]
-    UnionT[str, None]
+    tuple[int, str]
+    dict[str, str]
+    list[str]
+    Callable[P, str]  # type: ignore[type-arg]
+    Union[str, None]
+    Optional[str]

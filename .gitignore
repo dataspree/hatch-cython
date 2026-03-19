@@ -17,3 +17,4 @@ dist/
 .pytest_cache
 junit.xml
 .idea/
+.claude

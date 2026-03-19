@@ -13,8 +13,7 @@ def clean(s: str):
     return "\n".join(v.strip() for v in s.splitlines() if v.strip() != "")
 
 
-EXPECT = dedent(
-    """
+EXPECT = dedent("""
 from setuptools import Extension, setup
 from Cython.Build import cythonize
 
@@ -40,8 +39,7 @@ if __name__ == "__main__":
             include_path=INCLUDES,
             abc='def'
     )
-    setup(ext_modules=ext_modules)"""
-)
+    setup(ext_modules=ext_modules)""")
 
 
 def test_setup_py():

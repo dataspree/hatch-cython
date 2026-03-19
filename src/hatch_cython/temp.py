@@ -1,17 +1,16 @@
 from typing import TypedDict
 
 from hatch_cython.config import Config
-from hatch_cython.types import ListStr, ListT
 from hatch_cython.utils import options_kws
 
 
 class ExtensionArg(TypedDict):
     name: str
-    files: ListStr
+    files: list[str]
 
 
 def setup_py(
-    *files: ListT[ListStr],
+    *files: list[list[str]],
     options: Config,
     sdist: bool,
 ):

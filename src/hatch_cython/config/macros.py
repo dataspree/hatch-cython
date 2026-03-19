@@ -1,9 +1,9 @@
-from hatch_cython.types import ListT, TupleT, UnionT
+from typing import Optional
 
-DefineMacros = ListT[TupleT[str, UnionT[str, None]]]
+DefineMacros = list[tuple[str, Optional[str]]]
 
 
-def parse_macros(define: ListT[ListT[str]]) -> DefineMacros:
+def parse_macros(define: list[list[str]]) -> DefineMacros:
     """Parses define_macros from list[list[str, ...]] -> list[tuple[str, str|None]]
 
     Args:
@@ -24,9 +24,8 @@ def parse_macros(define: ListT[ListT[str]]) -> DefineMacros:
                 "where None value denotes #define FOO"
             )
             raise ValueError(msg, inst)
-        inst: list
         if size == 1:
-            define[i] = (inst[0], None)
+            define[i] = (inst[0], None)  # type: ignore[call-overload]
         else:
-            define[i] = (inst[0], inst[1])
-    return define
+            define[i] = (inst[0], inst[1])  # type: ignore[call-overload]
+    return define  # type: ignore[return-value]

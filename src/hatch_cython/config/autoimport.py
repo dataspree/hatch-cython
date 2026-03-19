@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Optional
 
 
 @dataclass
@@ -6,9 +7,9 @@ class Autoimport:
     pkg: str
 
     include: str
-    libraries: str = field(default=None)
-    library_dirs: str = field(default=None)
-    required_call: str = field(default=None)
+    libraries: Optional[str] = field(default=None)
+    library_dirs: Optional[str] = field(default=None)
+    required_call: Optional[str] = field(default=None)
 
 
 __packages__ = {

@@ -1,9 +1,8 @@
 import re
 from dataclasses import dataclass, field
-from typing import Type
+from typing import Optional
 
 from hatch_cython.config.platform import PlatformBase
-from hatch_cython.types import DictT, ListT, UnionT
 from hatch_cython.utils import parse_user_glob
 
 
@@ -18,22 +17,22 @@ class OptInclude(PlatformBase):
 
 
 def _get_file_list(
-        cls: Type[UnionT[OptInclude, OptExclude]],
-        files: ListT[UnionT[str, OptInclude, OptExclude]]
-) -> ListT[str]:
+    cls: "type[OptInclude | OptExclude]",
+    files: "list[str | OptInclude | OptExclude]",
+) -> "list[OptInclude | OptExclude]":
     return [
-        *[cls(**d) for d in files if isinstance(d, dict)],
+        *[cls(**d) for d in files if isinstance(d, dict)],  # type: ignore[arg-type]
         *[cls(matches=s) for s in files if isinstance(s, str)],
     ]
 
 
 @dataclass
 class FileArgs:
-    targets: ListT[UnionT[str, OptInclude]] = field(default_factory=list)
-    exclude: ListT[UnionT[str, OptExclude]] = field(default_factory=list)
-    aliases: DictT[str, str] = field(default_factory=dict)
-    exclude_compiled_src: ListT[UnionT[str, OptExclude]] = field(default_factory=list)
-    include_compiled_src: ListT[UnionT[str, OptInclude]] = field(default_factory=list)
+    targets: list[str | OptInclude] = field(default_factory=list)
+    exclude: list[str | OptExclude] = field(default_factory=list)
+    aliases: dict[str, str] = field(default_factory=dict)
+    exclude_compiled_src: list[str | OptExclude] = field(default_factory=list)
+    include_compiled_src: list[str | OptInclude] = field(default_factory=list)
 
     def __post_init__(self):
         rep = {}
@@ -49,7 +48,7 @@ class FileArgs:
     def explicit_targets(self) -> bool:
         return len(self.targets) > 0
 
-    def matches_alias(self, other: str) -> UnionT[str, None]:
+    def matches_alias(self, other: str) -> Optional[str]:
         matched = [re.match(v, other) for v in self.aliases.keys()]
         if any(matched):
             first = 0
@@ -58,3 +57,4 @@ class FileArgs:
                     break
                 first += 1
             return self.aliases[list(self.aliases.keys())[first]]
+        return None

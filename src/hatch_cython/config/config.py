@@ -1,8 +1,9 @@
 import os
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from dataclasses import asdict, dataclass, field
 from importlib import import_module
 from os import path
+from typing import Any, Optional
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
@@ -15,7 +16,6 @@ from hatch_cython.config.macros import DefineMacros, parse_macros
 from hatch_cython.config.platform import ListedArgs, PlatformArgs, parse_platform_args
 from hatch_cython.config.templates import Templates, parse_template_kwds
 from hatch_cython.constants import DIRECTIVES, EXIST_TRIM, INCLUDE, LTPY311, MUST_UNIQUE
-from hatch_cython.types import CallableT, ListStr, UnionT
 
 # fields tracked by this plugin
 __known__ = frozenset(
@@ -36,7 +36,7 @@ __known__ = frozenset(
         "cythonize_kwargs",
         "include_all_compiled_src",
         "compiled_extensions_as_artifacts",
-        "intermediate_extensions_as_artifacts"
+        "intermediate_extensions_as_artifacts",
     )
 )
 
@@ -48,19 +48,14 @@ def parse_from_dict(cls: BuildHookInterface):
     kwargs = {}
     for key, val in given.items():
         if key in __known__:
-            parsed: any
             if key == "files":
-                val: dict
-                parsed: FileArgs = FileArgs(**val)
+                parsed: Any = FileArgs(**val)
             elif key == "define_macros":
-                val: list
-                parsed: DefineMacros = parse_macros(val)
+                parsed = parse_macros(val)
             elif key == "templates":
-                val: dict
-                parsed: Templates = parse_template_kwds(val)
+                parsed = parse_template_kwds(val)
             else:
-                val: any
-                parsed: any = val
+                parsed = val
             kwargs[key] = parsed
             passed.pop(key)
             continue
@@ -68,7 +63,7 @@ def parse_from_dict(cls: BuildHookInterface):
     compile_args = parse_platform_args(kwargs, "compile_args", get_default_compile)
     link_args = parse_platform_args(kwargs, "extra_link_args", get_default_link)
     envflags = parse_env_args(kwargs)
-    cfg = Config(**kwargs, compile_args=compile_args, extra_link_args=link_args, envflags=envflags)
+    cfg = Config(**kwargs, compile_args=compile_args, extra_link_args=link_args, envflags=envflags)  # type: ignore[arg-type]
 
     for maybe_dep, spec in passed.copy().items():
         is_include = maybe_dep.startswith(INCLUDE)
@@ -138,12 +133,12 @@ def parse_from_dict(cls: BuildHookInterface):
 
 @dataclass
 class Config:
-    src: UnionT[str, None] = field(default=None)
+    src: Optional[str] = field(default=None)
     files: FileArgs = field(default_factory=FileArgs)
-    includes: ListStr = field(default_factory=list)
+    includes: list[str] = field(default_factory=list)
     define_macros: DefineMacros = field(default_factory=list)
-    libraries: ListStr = field(default_factory=list)
-    library_dirs: ListStr = field(default_factory=list)
+    libraries: list[str] = field(default_factory=list)
+    library_dirs: list[str] = field(default_factory=list)
     directives: dict = field(default_factory=lambda: DIRECTIVES)
     compile_args: ListedArgs = field(default_factory=get_default_compile)
     compile_kwargs: dict = field(default_factory=dict)
@@ -173,9 +168,9 @@ class Config:
         cls: BuildHookInterface,
         im: Autoimport,
         att: str,
-        mod: any,
-        extend: CallableT[[ListStr], None],
-        append: CallableT[[str], None],
+        mod: Any,
+        extend: Callable[[list[str]], None],
+        append: Callable[[str], None],
     ):
         attr = getattr(im, att)
         if attr is not None:
@@ -187,9 +182,9 @@ class Config:
                 if isinstance(libraries, str):
                     append(libraries)
                 elif isinstance(libraries, (list, Generator)):
-                    extend(libraries)
+                    extend(libraries)  # type: ignore[arg-type]
                 elif isinstance(libraries, dict):
-                    extend(libraries.values())
+                    extend(libraries.values())  # type: ignore[arg-type]
                 else:
                     cls.app.display_warning(f"{im.pkg}.{attr} has an invalid type ({type(libraries)})")
 
@@ -234,11 +229,11 @@ class Config:
                 cls.app.display_warning(f"{im.pkg}.{im.required_call} is invalid")
 
     def _arg_impl(self, target: ListedArgs):
-        args = {"any": []}
+        args: dict = {"any": []}
 
         def with_argvalue(arg: str):
             # be careful with e.g. -Ox flags
-            matched = list(filter(lambda s: arg.startswith(s), MUST_UNIQUE))
+            matched = [s for s in MUST_UNIQUE if arg.startswith(s)]
             if len(matched) != 0:
                 m = matched[0]
                 args[m] = arg.split(" ")
@@ -249,7 +244,7 @@ class Config:
             # if compile-arg format, check platform applies
             if isinstance(arg, PlatformArgs):
                 if arg.applies() and arg.is_exist(EXIST_TRIM):
-                    with_argvalue(arg.arg)
+                    with_argvalue(arg.arg)  # type: ignore[arg-type]
             # else assume string / user knows what theyre doing and add to the call params
             else:
                 with_argvalue(arg)
