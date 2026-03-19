@@ -36,7 +36,7 @@ class IndexItem(PlatformBase):
     def file_match(self, file: str) -> bool:
         for patt in self.matches:  # type: ignore[union-attr]
             # we take the local part out since we match on extensions
-            if re.match(patt, file.replace("./", "")):
+            if re.match(patt, file.replace("\\", "/").replace("./", "")):
                 return True
         return False
 
