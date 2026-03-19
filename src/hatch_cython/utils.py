@@ -18,24 +18,28 @@ def stale(src: str, dest: str):
 
 
 def memo(func: Callable[P, T]) -> Callable[P, T]:
-    keyed = {}
+    global_cache: dict = {}
 
     def wrapped(*args: P.args, **kwargs: P.kwargs) -> T:
-        nonlocal keyed
-
-        # if we have a class, memo will reserve objects between
-        # instances, so we need to key this by the id of the instance
-        # note: dont call hasattr here because hasattr is pretty much
-        # a try catch for property access - ergo we get infinite recursive
-        # calls if a property is memoed
+        # if we have a class, store the cache on the instance itself so that
+        # the cache lifetime is tied to the instance.  Keying by id() alone
+        # is unsafe because Python reuses memory addresses after GC, causing
+        # a new instance to get a stale cache hit from a previous one.
+        # note: access obj.__dict__ directly rather than hasattr/getattr to
+        # avoid infinite recursion when a property is decorated with @memo.
         if len(args) != 0 and func.__name__ in dir(args[0]):
-            idof = id(args[0])
-        else:
-            idof = None
+            obj = args[0]
+            try:
+                cache = obj.__dict__.setdefault("__memo__", {})
+            except AttributeError:
+                cache = global_cache.setdefault(id(obj), {})
+            if func.__name__ not in cache:
+                cache[func.__name__] = func(*args, **kwargs)
+            return cache[func.__name__]
 
-        if idof not in keyed:
-            keyed[idof] = func(*args, **kwargs)
-        return keyed[idof]
+        if None not in global_cache:
+            global_cache[None] = func(*args, **kwargs)
+        return global_cache[None]
 
     return wrapped
 

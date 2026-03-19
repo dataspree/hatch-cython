@@ -125,12 +125,6 @@ class CythonBuildHook(BuildHookInterface):
 
         super().__init__(*args, **kwargs)
 
-        # Compute options eagerly and store directly on the instance.
-        # This avoids the @memo ID-reuse bug: Python can reuse a memory address
-        # for a new object after GC, causing @memo to return a stale Config from
-        # a prior instance without re-executing side effects such as
-        # precompiled_extensions.add(".py"). Storing on self bypasses the shared
-        # id()-keyed cache entirely.
         self._options = parse_from_dict(self)
         if self._options.compile_py:
             self.precompiled_extensions.add(".py")
@@ -150,8 +144,6 @@ class CythonBuildHook(BuildHookInterface):
         return plat() == "windows"
 
     def normalize_path(self, pattern: str) -> str:
-        if self.is_windows:
-            return pattern.replace("/", "\\")
         return pattern.replace("\\", "/")
 
     def normalize_glob(self, pattern: str):
@@ -366,6 +358,7 @@ class CythonBuildHook(BuildHookInterface):
             yield os.path.realpath(temp_dir)
 
     def get_aliased_path(self, path: str) -> str:
+        path = path.replace("\\", "/")
         path_without_src = path
         if self.is_src:
             path_without_src = path.replace("src/", "")
