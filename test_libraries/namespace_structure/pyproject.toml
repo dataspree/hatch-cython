@@ -1,0 +1,11 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling", "Cython", "setuptools"]
+
+[project]
+name = "org-myproject"
+dynamic = ["version"]
+requires-python = ">=3.8"
+
+[tool.hatch.version]
+path = "src/org/myproject/__about__.py"

@@ -1,5 +1,8 @@
 import gc
+import io
 import shutil
+import tempfile
+import zipfile
 from os import getcwd, path
 from pathlib import Path
 from sys import path as syspath
@@ -36,6 +39,73 @@ def new_src_proj(tmp_path):
     shutil.copytree(join("test_libraries/src_structure", "include"), (project_dir / "include"))
     shutil.copytree(join("test_libraries/src_structure", "scripts"), (project_dir / "scripts"))
     return project_dir
+
+
+@pytest.fixture
+def new_namespace_proj(tmp_path):
+    project_dir = tmp_path / "app"
+    project_dir.mkdir()
+    (project_dir / "pyproject.toml").write_text(read("test_libraries/namespace_structure/pyproject.toml"))
+    (project_dir / "hatch.toml").write_text(read("test_libraries/namespace_structure/hatch.toml"))
+    (project_dir / "LICENSE.txt").write_text("")
+    shutil.copytree(join("test_libraries/namespace_structure", "src"), (project_dir / "src"))
+    return project_dir
+
+
+def test_namespace_build_hook(new_namespace_proj):
+    with override_dir(new_namespace_proj):
+        syspath.insert(0, str(new_namespace_proj))
+        build_config = load(new_namespace_proj / "hatch.toml")["build"]
+        cython_config = build_config["hooks"]["custom"]
+        builder = WheelBuilder(root=str(new_namespace_proj))
+        hook = CythonBuildHook(
+            new_namespace_proj,
+            cython_config,
+            WheelBuilderConfig(
+                builder=builder,
+                root=str(new_namespace_proj),
+                plugin_name="cython",
+                build_config=build_config,
+                target_config=build_config["targets"]["wheel"],
+            ),
+            SimpleNamespace(name="org-myproject"),
+            directory=new_namespace_proj,
+            target_name="wheel",
+        )
+
+        assert hook.is_src
+        assert hook.dir_name == "org/myproject"
+        assert hook.project_dir == "src/org/myproject"
+
+        assert sorted(hook.precompiled_globs) == sorted(
+            [
+                "src/org/myproject/*.py",
+                "src/org/myproject/**/*.py",
+                "src/org/myproject/*.pyx",
+                "src/org/myproject/**/*.pyx",
+                "src/org/myproject/*.pxd",
+                "src/org/myproject/**/*.pxd",
+            ]
+        )
+
+        assert sorted(hook.normalized_included_files) == sorted(
+            [
+                "src/org/myproject/__about__.py",
+                "src/org/myproject/__init__.py",
+                "src/org/myproject/core.pyx",
+            ]
+        )
+
+        assert sorted(
+            [{**ls, "files": sorted(ls.get("files"))} for ls in hook.grouped_included_files],
+            key=lambda x: x.get("name"),
+        ) == [
+            {"name": "org.myproject.__about__", "files": ["src/org/myproject/__about__.py"]},
+            {"name": "org.myproject.__init__", "files": ["src/org/myproject/__init__.py"]},
+            {"name": "org.myproject.core", "files": ["src/org/myproject/core.pyx"]},
+        ]
+
+    syspath.remove(str(new_namespace_proj))
 
 
 @pytest.mark.parametrize("include_all_compiled_src", [None, True, False])
@@ -236,5 +306,73 @@ def test_clean_removes_generated_files(new_src_proj):
         so_files_after = list(src_dir.rglob("*.so")) + list(src_dir.rglob("*.pyd"))
         assert len(c_files_after) == 0, f".c files not removed by clean(): {c_files_after}"
         assert len(so_files_after) == 0, f"compiled extension files not removed by clean(): {so_files_after}"
+
+    syspath.remove(str(new_src_proj))
+
+
+def test_finalize_drops_compiled_src_when_include_all_false(new_src_proj):
+    """finalize() must remove compiled .py files from the wheel when include_all_compiled_src=False.
+
+    Files listed in include_compiled_src should survive; everything else that was
+    compiled should be dropped.
+    """
+    with override_dir(new_src_proj):
+        syspath.insert(0, str(new_src_proj))
+        build_config = load(new_src_proj / "hatch.toml")["build"]
+        cython_config = build_config["hooks"]["custom"]
+        cython_config["options"]["include_all_compiled_src"] = False
+
+        builder = WheelBuilder(root=str(new_src_proj))
+        hook = CythonBuildHook(
+            new_src_proj,
+            cython_config,
+            WheelBuilderConfig(
+                builder=builder,
+                root=str(new_src_proj),
+                plugin_name="cython",
+                build_config=build_config,
+                target_config=build_config["targets"]["wheel"],
+            ),
+            SimpleNamespace(name="example_lib"),
+            directory=new_src_proj,
+            target_name="wheel",
+        )
+
+        # Wheel paths use no "src/" prefix (hatchling strips it for src-layout).
+        # These are all compiled files; normal_include_compiled_src.py is the only
+        # one listed in include_compiled_src and should survive.
+        wheel_py_files = [
+            "example_lib/__about__.py",
+            "example_lib/__init__.py",
+            "example_lib/normal.py",
+            "example_lib/normal_exclude_compiled_src.py",
+            "example_lib/normal_include_compiled_src.py",
+        ]
+        record_name = "example_lib-0.1.0.dist-info/RECORD"
+
+        # Build a minimal fake wheel zip
+        with tempfile.NamedTemporaryFile(suffix=".whl", delete=False) as tmp:
+            whl_path = tmp.name
+        with zipfile.ZipFile(whl_path, "w") as zf:
+            for f in wheel_py_files:
+                zf.writestr(f, b"# placeholder")
+            zf.writestr(record_name, "")
+
+        build_data: dict = {"artifacts": [], "force_include": {}}
+        hook.finalize("0.1.0", build_data, whl_path)
+
+        with zipfile.ZipFile(whl_path) as zf:
+            names = set(zf.namelist())
+
+        # normal_include_compiled_src.py is in include_compiled_src → must stay
+        assert "example_lib/normal_include_compiled_src.py" in names
+        # all other compiled .py files must be dropped
+        for dropped in [
+            "example_lib/__about__.py",
+            "example_lib/__init__.py",
+            "example_lib/normal.py",
+            "example_lib/normal_exclude_compiled_src.py",
+        ]:
+            assert dropped not in names, f"{dropped!r} should have been dropped from wheel"
 
     syspath.remove(str(new_src_proj))
