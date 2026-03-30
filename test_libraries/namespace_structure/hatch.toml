@@ -1,0 +1,12 @@
+[build]
+ignore-vcs = true
+
+[build.hooks.custom]
+dependencies = ["Cython", "setuptools", "hatch"]
+path = "../../src/hatch_cython/devel.py"
+
+[build.hooks.custom.options]
+src = "org/myproject"
+
+[build.targets.wheel]
+packages = ["src/org"]

@@ -427,7 +427,10 @@ class CythonBuildHook(BuildHookInterface):
     def inclusion_map(self):
         include = {}
         for compl in list(self.compiled_files.keys()):
-            include[compl] = compl
+            dest = compl
+            if self.is_src and dest.startswith("src/"):
+                dest = dest[4:]  # strip "src/" for correct wheel placement
+            include[compl] = dest
         self.app.display_debug("Derived inclusion map")
         self.app.display_debug(include)
         return include
@@ -565,7 +568,25 @@ class CythonBuildHook(BuildHookInterface):
                 return False
 
             # IMPORTANT: use your existing pathspec-based matchers
-            return self.path_is_excluded_compiled_src(name) and not self.path_is_included_compiled_src(name)
+            # For src-layout, config patterns may use "src/" prefix
+            # but wheel paths don't have it. Try both.
+            is_excluded = self.path_is_excluded_compiled_src(name)
+            is_included = self.path_is_included_compiled_src(name)
+            if self.is_src:
+                src_name = f"src/{name}"
+                is_excluded = is_excluded or self.path_is_excluded_compiled_src(src_name)
+                is_included = is_included or self.path_is_included_compiled_src(src_name)
+
+            # Mirror path_is_wanted_excluded_compiled_src: when include_all_compiled_src
+            # is False, treat every compiled .py as excluded (unless in include_compiled_src)
+            if not self.options.include_all_compiled_src:
+                is_compiled = self.path_is_wanted(name)
+                if self.is_src:
+                    is_compiled = is_compiled or self.path_is_wanted(f"src/{name}")
+                if is_compiled:
+                    is_excluded = True
+
+            return is_excluded and not is_included
 
         tmp_fd, tmp_path = tempfile.mkstemp(suffix=".whl")
         os.close(tmp_fd)
